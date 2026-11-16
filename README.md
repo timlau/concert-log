@@ -35,16 +35,18 @@ the rest of the desktop.
 
 ```bash
 cd ~/udv/concert-log
-./run.sh
+uv sync
+uv run main.py
 ```
 
-`run.sh` creates `.venv` and installs PySide6 the first time, then launches the
-app. To set it up or run it manually:
+`uv sync` creates `.venv` and installs the pinned dependencies from
+`uv.lock`. `uv run main.py` keeps the environment in sync automatically, so
+`./run.sh` is a convenience wrapper around it.
+
+To run with a different database:
 
 ```bash
-uv venv --python python3 .venv
-uv pip install --python .venv/bin/python "PySide6>=6.6"
-.venv/bin/python main.py
+uv run main.py --db /path/to/concerts.db
 ```
 
 ### Desktop launcher
@@ -74,7 +76,7 @@ created on first launch. Override the location with either:
 
 ```bash
 CONCERT_LOG_DB=/path/to/concerts.db ./run.sh
-.venv/bin/python main.py --db /path/to/concerts.db
+uv run main.py --db /path/to/concerts.db
 ```
 
 Back it up by copying that single `.db` file.
@@ -204,7 +206,7 @@ the calendar visible).
 
 ```bash
 cd ~/udv/concert-log
-.venv/bin/python -m unittest discover -s tests -v
+uv run python -m unittest discover -s tests -v
 ```
 
 The suite covers database CRUD, search, validation, band/lineup handling, theme
@@ -213,7 +215,7 @@ loading/fallback, and the Obsidian importer.
 To check that the QML loads cleanly without opening a window:
 
 ```bash
-QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software .venv/bin/python main.py --check
+QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software uv run main.py --check
 ```
 
 ## Layout
@@ -228,5 +230,5 @@ qml/components/             buttons, text fields, chips, date picker
 qml/dialogs/                add/edit show, artist manager, confirmation
 import_obsidian.py          Obsidian markdown frontmatter importer
 tests/                      database, theme, and importer tests; preview renderer
-run.sh                      venv bootstrap and launcher
+run.sh                      launcher that runs the app through uv
 ```
