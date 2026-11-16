@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Concert Log
+GenericName=Concert Journal
+Comment=Log the concerts you have been to
+Exec=/home/tim/udv/concert-log/run.sh
+Icon=/home/tim/udv/concert-log/assets/concert-log.svg
+Terminal=false
+Categories=Utility;
+Keywords=concert;music;band;venue;gig;
+StartupNotify=true
+StartupWMClass=concert-log

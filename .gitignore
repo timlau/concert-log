@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Local databases and SQLite journals
+*.db
+*.db-wal
+*.db-shm
+
+# OS noise
+.DS_Store
