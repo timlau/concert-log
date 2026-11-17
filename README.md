@@ -16,6 +16,8 @@ the rest of the desktop.
 - Setlist photos are imported from a file picker, resized to at most 1024 px
   high (aspect ratio kept), stored beside the database, and opened full-size in
   a popup when clicked.
+- Export the whole log to one `.zip`, then import it on another computer to
+  keep the two lists in sync (photos included).
 - Multi-day events: give a show an end date and it displays as a date range.
 - Future shows are marked automatically: an accent `UPCOMING` badge plus a hint
   such as `In 42 days` or `Tomorrow`; a show happening today or during a
@@ -88,6 +90,31 @@ Setlist photos live in a `setlists/` folder next to the database, so back that
 up together with the `.db` file. Rows store only the image filename; deleting or
 replacing a photo removes the old file.
 
+## Syncing two computers
+
+Click **Sync** in the app to export or import an archive.
+
+1. On computer A, choose **Export…** and save the generated `.zip` somewhere
+   both machines can reach (a Nextcloud folder, USB stick, etc.).
+2. On computer B, choose **Import…**, pick that `.zip`, and confirm the result
+   shown in the dialog.
+3. Repeat in the other direction when you have made changes on B.
+
+The archive is a zip containing `concert-log.json` plus every setlist photo in
+`setlists/`. Import **merges** rather than replaces:
+
+- Shows are identified by a stable sync ID stored in each row. Older databases
+  get IDs automatically on first launch, and shows with the same band, date,
+  event, venue, and city are also recognised as the same show.
+- New shows and artists are added. When both copies exist, the one with the
+  newer edit time wins; re-importing the same archive changes nothing.
+- Renamed artists and removed setlist photos follow their show.
+- Deleting a show or artist is **not** propagated — imports never remove local
+  data. Delete it on both machines if you want it gone from both.
+
+Backups made before sync IDs existed still import; their shows are matched by
+content instead.
+
 ## Importing Obsidian notes
 
 `import_obsidian.py` reads the YAML frontmatter of the concert notes in the
@@ -139,12 +166,14 @@ Exactly two tables:
 ```sql
 bands (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid        TEXT NOT NULL DEFAULT '',      -- stable id used for sync
     name       TEXT NOT NULL COLLATE NOCASE UNIQUE,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )
 
 concerts (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid         TEXT NOT NULL DEFAULT '',      -- stable id used for sync
     band_id     INTEGER NOT NULL REFERENCES bands(id) ON DELETE RESTRICT,
     event       TEXT NOT NULL DEFAULT '',   -- festival / tour / event name
     date        TEXT NOT NULL,              -- start date, YYYY-MM-DD
@@ -197,8 +226,8 @@ QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software \
     .venv/bin/python tests/render_preview.py /tmp/preview-list.png list
 ```
 
-Modes are `list`, `detail`, `add`, `bands`, and `date` (opens the add form with
-the calendar visible).
+Modes are `list`, `detail`, `add`, `bands`, `setlist`, `sync`, and `date` (opens
+the add form with the calendar visible).
 
 ## Keyboard shortcuts
 
@@ -217,8 +246,9 @@ cd ~/udv/concert-log
 uv run python -m unittest discover -s tests -v
 ```
 
-The suite covers database CRUD, search, validation, band/lineup handling, theme
-loading/fallback, and the Obsidian importer.
+The suite covers database CRUD, search, validation, band/lineup handling,
+setlist photos, export/import merging, theme loading/fallback, and the Obsidian
+importer.
 
 To check that the QML loads cleanly without opening a window:
 
@@ -234,9 +264,10 @@ concert_log/database.py     schema, queries, validation
 concert_log/backend.py      QML-facing properties and slots
 concert_log/theme.py        Omarchy colors.toml loading and palette derivation
 concert_log/setlist.py      setlist photo import, 1024 px resize, file cleanup
+concert_log/transfer.py     zip export and merge-on-import with sync IDs
 qml/Main.qml                window, show list, detail pane, shortcuts
 qml/components/             buttons, text fields, chips, date picker
-qml/dialogs/                add/edit show, artist manager, confirmation
+qml/dialogs/                add/edit show, artists, sync, confirmation
 import_obsidian.py          Obsidian markdown frontmatter importer
 tests/                      database, theme, and importer tests; preview renderer
 run.sh                      launcher that runs the app through uv

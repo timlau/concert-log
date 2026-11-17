@@ -7,7 +7,7 @@ from typing import Any
 
 from PySide6.QtCore import Property, QObject, Signal, Slot
 
-from . import setlist
+from . import setlist, transfer
 from .database import ConcertDB
 
 
@@ -112,6 +112,29 @@ class Backend(QObject):
         setlist.remove_image(self._db.setlist_dir, filename)
         self.reload()
         return {"ok": True}
+
+    @Slot(str, result="QVariantMap")
+    def exportData(self, destination: str) -> dict[str, Any]:
+        try:
+            result = transfer.export_archive(self._db, destination)
+        except ValueError as error:
+            return {"ok": False, "error": str(error)}
+        except OSError as error:
+            return {"ok": False, "error": f"Could not write the export: {error}"}
+        return {"ok": True, **result}
+
+    @Slot(str, result="QVariantMap")
+    def importData(self, source: str) -> dict[str, Any]:
+        try:
+            result = transfer.import_archive(self._db, source)
+        except ValueError as error:
+            return {"ok": False, "error": str(error)}
+        except OSError as error:
+            return {"ok": False, "error": f"Could not read the export: {error}"}
+        except sqlite3.Error as error:
+            return {"ok": False, "error": f"Database error: {error}"}
+        self.reload()
+        return {"ok": True, **result}
 
     @Slot(str, result="QVariantMap")
     def addBand(self, name: str) -> dict[str, Any]:

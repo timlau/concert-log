@@ -2,8 +2,12 @@
 
 Two tables only, as requested:
 
-    bands(id, name, created_at)
-    concerts(id, band_id, event, date, end_date, venue, city, other_bands, notes, setlist_image, ...)
+    bands(id, uid, name, created_at)
+    concerts(id, uid, band_id, event, date, end_date, venue, city, other_bands,
+             notes, setlist_image, ...)
+
+`uid` is a stable ID used when exporting and merging the log on another
+computer; existing rows get one on first launch.
 
 `other_bands` is a JSON array of band ids, which keeps supporting acts in the
 bands table without needing a third join table.
@@ -17,16 +21,19 @@ import sqlite3
 from datetime import date as date_type
 from pathlib import Path
 from typing import Any, Iterable
+from uuid import uuid4
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS bands (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid        TEXT NOT NULL DEFAULT '',
     name       TEXT NOT NULL COLLATE NOCASE UNIQUE,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS concerts (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid         TEXT NOT NULL DEFAULT '',
     band_id     INTEGER NOT NULL REFERENCES bands(id) ON DELETE RESTRICT,
     event       TEXT NOT NULL DEFAULT '',
     date        TEXT NOT NULL,
@@ -90,19 +97,44 @@ class ConcertDB:
         self.connection.commit()
 
     def _migrate(self) -> None:
+        self._add_columns(
+            "bands",
+            {
+                "uid": "TEXT NOT NULL DEFAULT ''",
+            },
+        )
+        self._add_columns(
+            "concerts",
+            {
+                "event": "TEXT NOT NULL DEFAULT ''",
+                "end_date": "TEXT NOT NULL DEFAULT ''",
+                "setlist_image": "TEXT NOT NULL DEFAULT ''",
+                "uid": "TEXT NOT NULL DEFAULT ''",
+            },
+        )
+
+        for table in ("bands", "concerts"):
+            rows = self.connection.execute(
+                f"SELECT id FROM {table} WHERE uid IS NULL OR uid = ''"
+            ).fetchall()
+            for row in rows:
+                self.connection.execute(
+                    f"UPDATE {table} SET uid = ? WHERE id = ?",
+                    (uuid4().hex, int(row["id"])),
+                )
+            self.connection.execute(
+                f"CREATE UNIQUE INDEX IF NOT EXISTS {table}_uid_idx ON {table}(uid)"
+            )
+
+    def _add_columns(self, table: str, additions: dict[str, str]) -> None:
         columns = {
             str(row["name"])
-            for row in self.connection.execute("PRAGMA table_info(concerts)")
-        }
-        additions = {
-            "event": "TEXT NOT NULL DEFAULT ''",
-            "end_date": "TEXT NOT NULL DEFAULT ''",
-            "setlist_image": "TEXT NOT NULL DEFAULT ''",
+            for row in self.connection.execute(f"PRAGMA table_info({table})")
         }
         for name, definition in additions.items():
             if name not in columns:
                 self.connection.execute(
-                    f"ALTER TABLE concerts ADD COLUMN {name} {definition}"
+                    f"ALTER TABLE {table} ADD COLUMN {name} {definition}"
                 )
 
     def close(self) -> None:
@@ -307,7 +339,9 @@ class ConcertDB:
         ).fetchone()
         if row:
             return int(row["id"])
-        cursor = self.connection.execute("INSERT INTO bands(name) VALUES (?)", (name,))
+        cursor = self.connection.execute(
+            "INSERT INTO bands(uid, name) VALUES (?, ?)", (uuid4().hex, name)
+        )
         return int(cursor.lastrowid)
 
     def _resolve_band_names(self, names: Iterable[Any], headliner: str) -> list[int]:
@@ -391,12 +425,13 @@ class ConcertDB:
                     cursor = self.connection.execute(
                         """
                         INSERT INTO concerts(
-                            band_id, event, date, end_date, venue, city,
+                            uid, band_id, event, date, end_date, venue, city,
                             other_bands, notes
                         )
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
+                            uuid4().hex,
                             band_id,
                             event,
                             parsed_date.isoformat(),

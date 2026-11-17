@@ -182,6 +182,12 @@ ApplicationWindow {
                 }
 
                 AppButton {
+                    text: "Sync"
+                    ghost: true
+                    onClicked: syncDialog.open()
+                }
+
+                AppButton {
                     text: "Artists"
                     ghost: true
                     onClicked: bandsDialog.open()
@@ -936,6 +942,12 @@ ApplicationWindow {
     BandsDialog {
         id: bandsDialog
         objectName: "bandsDialog"
+        parent: Overlay.overlay
+    }
+
+    SyncDialog {
+        id: syncDialog
+        objectName: "syncDialog"
         parent: Overlay.overlay
     }
 

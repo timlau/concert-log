@@ -16,16 +16,23 @@ def directory_for(db_path: Path) -> Path:
     return db_path.parent / "setlists"
 
 
-def source_to_path(source: str) -> Path:
+def local_path(source: str) -> Path:
     """Turn a local path or a `file://` URL from QML into a filesystem path."""
     text = str(source or "").strip()
     if not text:
-        raise ValueError("Choose a setlist photo first.")
+        raise ValueError("Choose a file first.")
     if text.startswith("file:"):
         local = QUrl(text).toLocalFile()
         if local:
             text = local
-    path = Path(text).expanduser()
+    return Path(text).expanduser()
+
+
+def source_to_path(source: str) -> Path:
+    """Resolve a local path or URL and make sure the file exists."""
+    if not str(source or "").strip():
+        raise ValueError("Choose a setlist photo first.")
+    path = local_path(source)
     if not path.is_file():
         raise ValueError("That setlist photo could not be found.")
     return path
