@@ -61,11 +61,15 @@ def main(argv: list[str] | None = None) -> int:
     QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
     )
+    # Qt registers the app with the xdg-desktop-portal while the application
+    # object is constructed. The identity must therefore be set beforehand,
+    # otherwise the portal registration is queued too late and fails with
+    # "Connection already associated with an application ID".
+    QGuiApplication.setApplicationName("Concert Log")
+    QGuiApplication.setApplicationDisplayName("Concert Log")
+    QGuiApplication.setOrganizationName("Concert Log")
+    QGuiApplication.setDesktopFileName("concert-log")
     app = QGuiApplication(sys.argv)
-    app.setApplicationName("Concert Log")
-    app.setApplicationDisplayName("Concert Log")
-    app.setOrganizationName("Concert Log")
-    app.setDesktopFileName("concert-log")
 
     theme = load_theme()
     family = font_family(QFontDatabase.families())
