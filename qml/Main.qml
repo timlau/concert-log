@@ -59,6 +59,13 @@ ApplicationWindow {
             concertDialog.openFor(selected)
     }
 
+    function openSetlist() {
+        if (selected && selected.setlistImage.length > 0) {
+            setlistViewer.source = selected.setlistImage
+            setlistViewer.open()
+        }
+    }
+
     function showToast(message) {
         toastText = message
         toastTimer.restart()
@@ -802,6 +809,62 @@ ApplicationWindow {
                             }
                         }
 
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+                            visible: window.selected !== null
+                                     && window.selected.setlistImage.length > 0
+
+                            RowLayout {
+                                spacing: 8
+
+                                Text {
+                                    text: "SETLIST PHOTO"
+                                    color: theme.foregroundDim
+                                    font.family: theme.fontFamily
+                                    font.pixelSize: 9
+                                    font.letterSpacing: 1.3
+                                }
+
+                                Text {
+                                    text: "click to enlarge"
+                                    color: theme.foregroundDim
+                                    font.family: theme.fontFamily
+                                    font.pixelSize: 9
+                                    opacity: 0.7
+                                }
+                            }
+
+                            Rectangle {
+                                Layout.preferredWidth: 250
+                                Layout.preferredHeight: 170
+                                radius: 8
+                                color: theme.inputBackground
+                                border.width: 1
+                                border.color: setlistThumbMouse.containsMouse
+                                              ? theme.accentBorder : theme.border
+                                clip: true
+
+                                Image {
+                                    anchors.fill: parent
+                                    anchors.margins: 4
+                                    source: window.selected
+                                            ? window.selected.setlistImage : ""
+                                    fillMode: Image.PreserveAspectFit
+                                    asynchronous: true
+                                    cache: false
+                                }
+
+                                MouseArea {
+                                    id: setlistThumbMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: window.openSetlist()
+                                }
+                            }
+                        }
+
                         Item {
                             Layout.fillWidth: true
                             height: 8
@@ -891,6 +954,73 @@ ApplicationWindow {
             } else {
                 window.selected = null
                 window.selectedId = -1
+            }
+        }
+    }
+
+    Popup {
+        id: setlistViewer
+        objectName: "setlistViewer"
+
+        property string source: ""
+
+        parent: Overlay.overlay
+        modal: true
+        focus: true
+        anchors.centerIn: parent
+        width: Math.min(window.width - 80, 980)
+        height: Math.min(window.height - 80, 900)
+        padding: 0
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        Overlay.modal: Rectangle {
+            color: theme.scrim
+        }
+
+        background: Rectangle {
+            color: theme.surfaceRaised
+            radius: 12
+            border.width: 1
+            border.color: theme.borderStrong
+        }
+
+        contentItem: Item {
+            Image {
+                anchors.fill: parent
+                anchors.margins: 16
+                source: setlistViewer.source
+                fillMode: Image.PreserveAspectFit
+                asynchronous: true
+                cache: false
+            }
+
+            Rectangle {
+                width: 30
+                height: 30
+                radius: 15
+                anchors.top: parent.top
+                anchors.right: parent.right
+                anchors.margins: 10
+                color: closeSetlistMouse.containsMouse
+                       ? theme.hover : theme.surface
+                border.width: 1
+                border.color: theme.border
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "×"
+                    color: theme.foreground
+                    font.family: theme.fontFamily
+                    font.pixelSize: 17
+                }
+
+                MouseArea {
+                    id: closeSetlistMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: setlistViewer.close()
+                }
             }
         }
     }

@@ -12,7 +12,10 @@ the rest of the desktop.
 
 - Master/detail layout: shows grouped by year on the left, full details on the right.
 - Log the headliner, event/festival, start and optional end date, venue, city,
-  support acts, and free-form notes.
+  support acts, free-form notes, and a setlist photo.
+- Setlist photos are imported from a file picker, resized to at most 1024 px
+  high (aspect ratio kept), stored beside the database, and opened full-size in
+  a popup when clicked.
 - Multi-day events: give a show an end date and it displays as a date range.
 - Future shows are marked automatically: an accent `UPCOMING` badge plus a hint
   such as `In 42 days` or `Tomorrow`; a show happening today or during a
@@ -81,6 +84,10 @@ uv run main.py --db /path/to/concerts.db
 
 Back it up by copying that single `.db` file.
 
+Setlist photos live in a `setlists/` folder next to the database, so back that
+up together with the `.db` file. Rows store only the image filename; deleting or
+replacing a photo removes the old file.
+
 ## Importing Obsidian notes
 
 `import_obsidian.py` reads the YAML frontmatter of the concert notes in the
@@ -146,6 +153,7 @@ concerts (
     city        TEXT NOT NULL DEFAULT '',
     other_bands TEXT NOT NULL DEFAULT '[]', -- JSON array of band ids
     notes       TEXT NOT NULL DEFAULT '',
+    setlist_image TEXT NOT NULL DEFAULT '',  -- filename in setlists/
     created_at  TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 )
@@ -225,6 +233,7 @@ main.py                     entry point, palette, QML engine
 concert_log/database.py     schema, queries, validation
 concert_log/backend.py      QML-facing properties and slots
 concert_log/theme.py        Omarchy colors.toml loading and palette derivation
+concert_log/setlist.py      setlist photo import, 1024 px resize, file cleanup
 qml/Main.qml                window, show list, detail pane, shortcuts
 qml/components/             buttons, text fields, chips, date picker
 qml/dialogs/                add/edit show, artist manager, confirmation

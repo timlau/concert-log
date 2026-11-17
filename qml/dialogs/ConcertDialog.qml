@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import "../components"
 
@@ -9,6 +10,9 @@ Dialog {
     property var concert: null
     property var otherBands: []
     property string errorText: ""
+    property string setlistSource: ""
+    property bool clearSetlist: false
+    property string setlistPreview: ""
 
     signal saved(int concertId)
 
@@ -34,6 +38,8 @@ Dialog {
         concert = show
         errorText = ""
         otherBands = []
+        setlistSource = ""
+        clearSetlist = false
         if (show) {
             headlinerField.text = show.band
             eventField.text = show.event
@@ -43,6 +49,7 @@ Dialog {
             cityField.text = show.city
             otherBands = show.otherBands.slice()
             notesArea.text = show.notes
+            setlistPreview = show.setlistImage
         } else {
             headlinerField.text = ""
             eventField.text = ""
@@ -51,8 +58,19 @@ Dialog {
             venueField.text = ""
             cityField.text = ""
             notesArea.text = ""
+            setlistPreview = ""
         }
         open()
+    }
+
+    function chooseSetlistPhoto() {
+        setlistFileDialog.open()
+    }
+
+    function clearSetlistPhoto() {
+        setlistSource = ""
+        clearSetlist = true
+        setlistPreview = ""
     }
 
     function openDatePicker() {
@@ -93,7 +111,9 @@ Dialog {
             venue: venueField.text,
             city: cityField.text,
             otherBands: otherBands,
-            notes: notesArea.text
+            notes: notesArea.text,
+            setlistSource: dialog.setlistSource,
+            clearSetlist: dialog.clearSetlist
         })
         if (!result.ok) {
             errorText = result.error
@@ -374,6 +394,83 @@ Dialog {
             }
         }
 
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Rectangle {
+                Layout.preferredWidth: 150
+                Layout.preferredHeight: 84
+                color: theme.inputBackground
+                radius: 7
+                border.width: 1
+                border.color: theme.border
+                clip: true
+
+                Image {
+                    anchors.fill: parent
+                    anchors.margins: 5
+                    source: dialog.setlistPreview
+                    fillMode: Image.PreserveAspectFit
+                    asynchronous: true
+                    cache: false
+                    visible: dialog.setlistPreview.length > 0
+                }
+
+                Text {
+                    anchors.centerIn: parent
+                    visible: dialog.setlistPreview.length === 0
+                    text: "No setlist photo"
+                    color: theme.foregroundDim
+                    font.family: theme.fontFamily
+                    font.pixelSize: 10
+                }
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 5
+
+                Text {
+                    text: "SETLIST PHOTO"
+                    color: theme.foregroundDim
+                    font.family: theme.fontFamily
+                    font.pixelSize: 9
+                    font.letterSpacing: 1.3
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: "Optional. Imported photos keep their shape and are resized to at most 1024 px high."
+                    color: theme.foregroundMuted
+                    font.family: theme.fontFamily
+                    font.pixelSize: 10
+                    wrapMode: Text.Wrap
+                }
+
+                RowLayout {
+                    spacing: 6
+
+                    AppButton {
+                        compact: true
+                        ghost: true
+                        text: dialog.setlistPreview.length > 0
+                              ? "Change photo" : "Choose photo"
+                        onClicked: dialog.chooseSetlistPhoto()
+                    }
+
+                    AppButton {
+                        compact: true
+                        ghost: true
+                        danger: true
+                        visible: dialog.setlistPreview.length > 0
+                        text: "Remove"
+                        onClicked: dialog.clearSetlistPhoto()
+                    }
+                }
+            }
+        }
+
         Text {
             Layout.fillWidth: true
             visible: dialog.errorText.length > 0
@@ -400,6 +497,18 @@ Dialog {
                 primary: true
                 onClicked: dialog.save()
             }
+        }
+    }
+
+    FileDialog {
+        id: setlistFileDialog
+
+        title: "Choose a setlist photo"
+        nameFilters: ["Images (*.jpg *.jpeg *.png *.webp *.bmp *.gif *.tif *.tiff)"]
+        onAccepted: {
+            dialog.setlistSource = selectedFile
+            dialog.setlistPreview = selectedFile
+            dialog.clearSetlist = false
         }
     }
 }

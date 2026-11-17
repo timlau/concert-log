@@ -7,6 +7,7 @@ from typing import Any
 
 from PySide6.QtCore import Property, QObject, Signal, Slot
 
+from . import setlist
 from .database import ConcertDB
 
 
@@ -76,10 +77,26 @@ class Backend(QObject):
 
     @Slot("QVariantMap", result="QVariantMap")
     def saveConcert(self, data: dict[str, Any]) -> dict[str, Any]:
+        payload = dict(data)
+        setlist_source = str(payload.pop("setlistSource", "") or "")
+        clear_setlist = bool(payload.pop("clearSetlist", False))
         try:
-            concert_id = self._db.save_concert(dict(data))
+            image = setlist.load_scaled(setlist_source) if setlist_source else None
+            concert_id = self._db.save_concert(payload)
+            if image is not None or clear_setlist:
+                previous = self._db.get_setlist_filename(concert_id)
+                if image is not None:
+                    filename = setlist.save_image(
+                        image, self._db.setlist_dir, concert_id
+                    )
+                    self._db.set_setlist_image(concert_id, filename)
+                else:
+                    self._db.set_setlist_image(concert_id, "")
+                setlist.remove_image(self._db.setlist_dir, previous)
         except ValueError as error:
             return {"ok": False, "error": str(error)}
+        except OSError as error:
+            return {"ok": False, "error": f"Setlist photo: {error}"}
         except sqlite3.Error as error:
             return {"ok": False, "error": f"Database error: {error}"}
         self.reload()
@@ -87,10 +104,12 @@ class Backend(QObject):
 
     @Slot(int, result="QVariantMap")
     def deleteConcert(self, concert_id: int) -> dict[str, Any]:
+        filename = ""
         try:
-            self._db.delete_concert(concert_id)
+            filename = self._db.delete_concert(concert_id)
         except sqlite3.Error as error:
             return {"ok": False, "error": f"Database error: {error}"}
+        setlist.remove_image(self._db.setlist_dir, filename)
         self.reload()
         return {"ok": True}
 

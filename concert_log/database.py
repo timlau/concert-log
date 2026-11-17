@@ -3,7 +3,7 @@
 Two tables only, as requested:
 
     bands(id, name, created_at)
-    concerts(id, band_id, event, date, end_date, venue, city, other_bands, notes, ...)
+    concerts(id, band_id, event, date, end_date, venue, city, other_bands, notes, setlist_image, ...)
 
 `other_bands` is a JSON array of band ids, which keeps supporting acts in the
 bands table without needing a third join table.
@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS concerts (
     city        TEXT NOT NULL DEFAULT '',
     other_bands TEXT NOT NULL DEFAULT '[]',
     notes       TEXT NOT NULL DEFAULT '',
+    setlist_image TEXT NOT NULL DEFAULT '',
     created_at  TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -78,13 +79,31 @@ def _parse_other_ids(raw: str) -> list[int]:
 
 class ConcertDB:
     def __init__(self, path: str | Path | None = None) -> None:
-        self.path = Path(path) if path else default_db_path()
+        self.path = Path(path).expanduser().resolve() if path else default_db_path().resolve()
+        self.setlist_dir = self.path.parent / "setlists"
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.connection = sqlite3.connect(self.path)
         self.connection.row_factory = sqlite3.Row
         self.connection.execute("PRAGMA foreign_keys = ON")
         self.connection.executescript(SCHEMA)
+        self._migrate()
         self.connection.commit()
+
+    def _migrate(self) -> None:
+        columns = {
+            str(row["name"])
+            for row in self.connection.execute("PRAGMA table_info(concerts)")
+        }
+        additions = {
+            "event": "TEXT NOT NULL DEFAULT ''",
+            "end_date": "TEXT NOT NULL DEFAULT ''",
+            "setlist_image": "TEXT NOT NULL DEFAULT ''",
+        }
+        for name, definition in additions.items():
+            if name not in columns:
+                self.connection.execute(
+                    f"ALTER TABLE concerts ADD COLUMN {name} {definition}"
+                )
 
     def close(self) -> None:
         self.connection.close()
@@ -103,7 +122,7 @@ class ConcertDB:
         rows = self.connection.execute(
             """
             SELECT id, band_id, event, date, end_date, venue, city,
-                   other_bands, notes, created_at
+                   other_bands, notes, setlist_image, created_at
             FROM concerts
             ORDER BY date DESC, id DESC
             """
@@ -127,6 +146,12 @@ class ConcertDB:
             venue = str(row["venue"])
             city = str(row["city"])
             notes = str(row["notes"])
+            setlist_image = ""
+            setlist_name = str(row["setlist_image"] or "")
+            if setlist_name:
+                candidate = self.setlist_dir / Path(setlist_name).name
+                if candidate.is_file():
+                    setlist_image = candidate.as_uri()
 
             end_date = ""
             raw_end = str(row["end_date"] or "")
@@ -209,6 +234,7 @@ class ConcertDB:
                     "otherBands": supporting,
                     "otherLabel": ", ".join(supporting),
                     "notes": notes,
+                    "setlistImage": setlist_image,
                     "createdAt": str(row["created_at"]),
                 }
             )
@@ -386,9 +412,27 @@ class ConcertDB:
             raise ValueError("That band name is already in use.") from error
         return concert_id
 
-    def delete_concert(self, concert_id: int) -> None:
+    def get_setlist_filename(self, concert_id: int) -> str:
+        row = self.connection.execute(
+            "SELECT setlist_image FROM concerts WHERE id = ?", (int(concert_id),)
+        ).fetchone()
+        return str(row["setlist_image"] or "") if row else ""
+
+    def set_setlist_image(self, concert_id: int, filename: str) -> None:
+        with self.connection:
+            cursor = self.connection.execute(
+                "UPDATE concerts SET setlist_image = ?, updated_at = datetime('now') "
+                "WHERE id = ?",
+                (Path(filename).name if filename else "", int(concert_id)),
+            )
+            if cursor.rowcount == 0:
+                raise ValueError("That show no longer exists.")
+
+    def delete_concert(self, concert_id: int) -> str:
+        filename = self.get_setlist_filename(concert_id)
         with self.connection:
             self.connection.execute("DELETE FROM concerts WHERE id = ?", (concert_id,))
+        return filename
 
     def add_band(self, name: str) -> int:
         clean = _clean(name)

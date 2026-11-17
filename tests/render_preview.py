@@ -4,7 +4,7 @@ Usage:
     QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software \
         .venv/bin/python tests/render_preview.py output.png [mode]
 
-Modes: list (default), detail, add, bands, date
+Modes: list (default), detail, add, bands, date, setlist
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ def main() -> int:
     window = engine.rootObjects()[0]
 
     def prepare() -> None:
-        if mode in {"detail", "add", "date"}:
+        if mode in {"detail", "add", "date", "setlist"}:
             invoke(window, "selectFirst")
         if mode in {"add", "date"}:
             invoke(window, "openAdd")
@@ -66,6 +66,8 @@ def main() -> int:
             dialog = window.findChild(QObject, "concertDialog")
             if dialog is not None:
                 invoke(dialog, "openDatePicker")
+        if mode == "setlist":
+            invoke(window, "openSetlist")
         if mode == "bands":
             dialog = window.findChild(QObject, "bandsDialog")
             if dialog is not None:

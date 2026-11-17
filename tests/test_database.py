@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 import tempfile
 import unittest
 from datetime import date
@@ -152,6 +153,66 @@ class ConcertDatabaseTests(unittest.TestCase):
         self.db.delete_concert(concert_id)
         self.assertEqual(self.db.list_concerts(), [])
         self.assertEqual(self.db.stats()["shows"], 0)
+
+    def test_setlist_image_round_trip_and_delete(self) -> None:
+        concert_id = self.add_show()
+        self.assertEqual(self.db.list_concerts()[0]["setlistImage"], "")
+
+        self.db.setlist_dir.mkdir(parents=True, exist_ok=True)
+        (self.db.setlist_dir / "concert-1-abc.jpg").write_bytes(b"photo")
+        self.db.set_setlist_image(concert_id, "concert-1-abc.jpg")
+
+        show = self.db.list_concerts()[0]
+        self.assertTrue(show["setlistImage"].startswith("file://"))
+        self.assertTrue(show["setlistImage"].endswith("concert-1-abc.jpg"))
+
+        self.db.save_concert(
+            {"id": concert_id, "band": "Godspeed You! Black Emperor", "date": "2025-06-14"}
+        )
+        self.assertEqual(self.db.get_setlist_filename(concert_id), "concert-1-abc.jpg")
+        self.assertEqual(self.db.delete_concert(concert_id), "concert-1-abc.jpg")
+
+    def test_adds_setlist_column_to_existing_database(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "old.db"
+            connection = sqlite3.connect(path)
+            connection.executescript(
+                """
+                CREATE TABLE bands (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+                    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+                CREATE TABLE concerts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    band_id INTEGER NOT NULL REFERENCES bands(id),
+                    date TEXT NOT NULL,
+                    venue TEXT NOT NULL DEFAULT '',
+                    city TEXT NOT NULL DEFAULT '',
+                    other_bands TEXT NOT NULL DEFAULT '[]',
+                    notes TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+                INSERT INTO bands(name) VALUES ('Old Band');
+                INSERT INTO concerts(band_id, date) VALUES (1, '2024-01-01');
+                """
+            )
+            connection.commit()
+            connection.close()
+
+            database = ConcertDB(path)
+            try:
+                columns = {
+                    str(row["name"])
+                    for row in database.connection.execute(
+                        "PRAGMA table_info(concerts)"
+                    )
+                }
+                self.assertIn("setlist_image", columns)
+                self.assertEqual(database.list_concerts()[0]["setlistImage"], "")
+            finally:
+                database.close()
 
 
 if __name__ == "__main__":
