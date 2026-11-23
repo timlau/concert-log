@@ -5,9 +5,10 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from PySide6.QtCore import Property, QObject, Signal, Slot
+from PySide6.QtCore import QUrl, Property, QObject, Signal, Slot
+from PySide6.QtGui import QDesktopServices
 
-from . import setlist, transfer
+from . import google_calendar, setlist, transfer
 from .database import ConcertDB
 
 
@@ -112,6 +113,16 @@ class Backend(QObject):
         setlist.remove_image(self._db.setlist_dir, filename)
         self.reload()
         return {"ok": True}
+
+    @Slot("QVariantMap", result="QVariantMap")
+    def openInGoogleCalendar(self, concert: dict[str, Any]) -> dict[str, Any]:
+        try:
+            url = google_calendar.event_url(concert)
+        except (KeyError, TypeError, ValueError) as error:
+            return {"ok": False, "error": f"Calendar link: {error}"}
+        if not QDesktopServices.openUrl(QUrl(url)):
+            return {"ok": False, "error": "Could not open a browser for Google Calendar."}
+        return {"ok": True, "url": url}
 
     @Slot(str, result="QVariantMap")
     def exportData(self, destination: str) -> dict[str, Any]:

@@ -19,6 +19,22 @@ ApplicationWindow {
     property var selected: null
     property string toastText: ""
 
+    readonly property var monthNames: [
+        "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
+        "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"
+    ]
+
+    // Shows are ordered newest first, so the first item of a month group tells
+    // us whether its year still needs a heading above it.
+    function monthStartsNewYear(key) {
+        const shows = backend.concerts
+        for (let i = 0; i < shows.length; ++i) {
+            if (shows[i].yearMonth === key)
+                return i === 0 || shows[i - 1].year !== shows[i].year
+        }
+        return true
+    }
+
     function selectConcert(show) {
         selectedId = show ? show.id : -1
         selected = show
@@ -64,6 +80,14 @@ ApplicationWindow {
             setlistViewer.source = selected.setlistImage
             setlistViewer.open()
         }
+    }
+
+    function openInGoogleCalendar() {
+        if (!selected)
+            return
+        const result = backend.openInGoogleCalendar(selected)
+        if (!result.ok)
+            window.showToast(result.error)
     }
 
     function showToast(message) {
@@ -303,19 +327,37 @@ ApplicationWindow {
                             bottomMargin: 10
                             boundsBehavior: Flickable.StopAtBounds
 
-                            section.property: "year"
+                            section.property: "yearMonth"
                             section.criteria: ViewSection.FullString
 
                             section.delegate: Item {
+                                id: monthSection
+
                                 width: ListView.view.width
-                                height: 34
+                                property bool newYear: window.monthStartsNewYear(section)
+                                height: newYear ? 50 : 34
+
+                                Text {
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 16
+                                    anchors.top: parent.top
+                                    anchors.topMargin: 8
+                                    visible: monthSection.newYear
+                                    text: section.substring(0, 4)
+                                    color: theme.accent
+                                    font.family: theme.fontFamily
+                                    font.pixelSize: 12
+                                    font.letterSpacing: 1.7
+                                    font.weight: Font.DemiBold
+                                    opacity: 0.85
+                                }
 
                                 Text {
                                     anchors.left: parent.left
                                     anchors.leftMargin: 16
                                     anchors.bottom: parent.bottom
                                     anchors.bottomMargin: 4
-                                    text: section
+                                    text: window.monthNames[parseInt(section.substring(5), 10) - 1]
                                     color: theme.accent
                                     font.family: theme.fontFamily
                                     font.pixelSize: 10
@@ -698,6 +740,12 @@ ApplicationWindow {
                             RowLayout {
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 8
+
+                                AppButton {
+                                    text: "Google Calendar"
+                                    ghost: true
+                                    onClicked: window.openInGoogleCalendar()
+                                }
 
                                 AppButton {
                                     text: "Edit"

@@ -23,10 +23,13 @@ the rest of the desktop.
   such as `In 42 days` or `Tomorrow`; a show happening today or during a
   multi-day run gets a green `TODAY` / `ONGOING` badge with `Happening now`,
   `Ends today`, or `Ends 17 Jun`.
+- Concert list grouped by year and month, with a separator for each.
 - Search across bands, events, venues, cities, notes, and support acts as you type.
 - Artist manager for adding, renaming, and removing bands, with show counts.
 - Autocomplete for band names, venues, and cities already in the log.
 - Inline calendar for picking a date, plus a keyboard-friendly `YYYY-MM-DD` field.
+- "Google Calendar" button on a show opens a prefilled all-day event with the
+  lineup, event, notes, and venue as the location (multi-day shows included).
 - Colors, surfaces, and font follow the current Omarchy theme.
 
 ## Requirements
@@ -39,7 +42,7 @@ the rest of the desktop.
 ## Run
 
 ```bash
-cd ~/udv/concert-log
+cd ~/udv/github/concert-log
 uv sync
 uv run main.py
 ```
@@ -56,17 +59,16 @@ uv run main.py --db /path/to/concerts.db
 
 ### Desktop launcher
 
-`concert-log.desktop` points at this checkout by absolute path. To add it to the
-application launcher:
+`./install.sh` creates a launcher that points at the checkout it lives in, using
+`run.sh` and `assets/concert-log.svg`, and installs it into
+`$XDG_DATA_HOME/applications` (default `~/.local/share/applications`):
 
 ```bash
-install -Dm644 concert-log.desktop ~/.local/share/applications/concert-log.desktop
-update-desktop-database ~/.local/share/applications 2>/dev/null || true
+./install.sh
 ```
 
-If the project lives somewhere other than `~/udv/concert-log`, update the `Exec=`
-and `Icon=` paths in the desktop file first. The icon is
-`assets/concert-log.svg`.
+The launcher uses absolute paths as desktop entries require, so run the script
+again after moving the checkout to refresh it.
 
 ## Data
 
@@ -242,7 +244,7 @@ the add form with the calendar visible).
 ## Tests
 
 ```bash
-cd ~/udv/concert-log
+cd ~/udv/github/concert-log
 uv run python -m unittest discover -s tests -v
 ```
 
@@ -271,4 +273,5 @@ qml/dialogs/                add/edit show, artists, sync, confirmation
 import_obsidian.py          Obsidian markdown frontmatter importer
 tests/                      database, theme, and importer tests; preview renderer
 run.sh                      launcher that runs the app through uv
+install.sh                  installs a desktop launcher for this checkout
 ```

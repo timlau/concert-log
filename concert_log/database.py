@@ -259,6 +259,7 @@ class ConcertDB:
                     "day": f"{show_date.day:02d}",
                     "month": MONTHS[show_date.month - 1],
                     "year": str(show_date.year),
+                    "yearMonth": f"{show_date.year}-{show_date.month:02d}",
                     "weekday": WEEKDAYS[show_date.weekday()],
                     "venue": venue,
                     "city": city,

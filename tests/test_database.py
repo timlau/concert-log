@@ -58,6 +58,14 @@ class ConcertDatabaseTests(unittest.TestCase):
         self.assertEqual(show["dateLabel"], "Sat, 14 Jun 2025 – Tue, 17 Jun 2025")
         self.assertEqual(self.db.list_events(), ["Copenhell"])
 
+    def test_year_month_grouping_key(self) -> None:
+        self.add_show(date="2025-06-14")
+        self.add_show(date="2025-07-04")
+
+        shows = self.db.list_concerts()
+        self.assertEqual(shows[0]["yearMonth"], "2025-07")
+        self.assertEqual(shows[1]["yearMonth"], "2025-06")
+
     def test_same_day_end_date_is_normalized(self) -> None:
         self.add_show(endDate="2025-06-14")
         show = self.db.list_concerts()[0]
