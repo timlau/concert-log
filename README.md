@@ -18,6 +18,8 @@ the rest of the desktop.
   a popup when clicked.
 - Export the whole log to one `.zip`, then import it on another computer to
   keep the two lists in sync (photos included).
+- Export every show as an individual `.md` note with YAML frontmatter, written
+  to the folder configured in `config.toml`.
 - Multi-day events: give a show an end date and it displays as a date range.
 - Future shows are marked automatically: an accent `UPCOMING` badge plus a hint
   such as `In 42 days` or `Tomorrow`; a show happening today or during a
@@ -116,6 +118,44 @@ The archive is a zip containing `concert-log.json` plus every setlist photo in
 
 Backups made before sync IDs existed still import; their shows are matched by
 content instead.
+
+## Exporting Markdown notes
+
+Click **Export notes** in the **Sync** dialog to write one `.md` file per
+concert. Files are named `YYYY-MM-DD Artist Venue.md` (for example
+`2026-11-30 Junkyard Drive Gimle.md`) and each contains only YAML frontmatter:
+
+```yaml
+---
+Date: 2019-01-26
+Artist: Junkyard Drive
+Other Artists:
+Event:
+Venue: gimle
+Participaed: True
+Category: concert
+---
+```
+
+`Participaed` is `True` when the show's start date is today or earlier and
+`False` for upcoming shows. Existing files with the same name are overwritten,
+so the export can be repeated after editing shows. Characters that are unsafe
+in filenames (`/`, `:`, `?`, and similar) are replaced with spaces.
+
+Set the destination folder in:
+
+```
+$XDG_CONFIG_HOME/concert-log/config.toml
+```
+
+which defaults to `~/.config/concert-log/config.toml`:
+
+```toml
+markdown_export_dir = "~/Nextcloud/Documents/Notes/Concerts"
+```
+
+`~` is expanded and missing directories are created. Without this setting the
+export button reports the config file it expects.
 
 ## Importing Obsidian notes
 
@@ -249,8 +289,8 @@ uv run python -m unittest discover -s tests -v
 ```
 
 The suite covers database CRUD, search, validation, band/lineup handling,
-setlist photos, export/import merging, theme loading/fallback, and the Obsidian
-importer.
+setlist photos, export/import merging, Markdown note export, theme
+loading/fallback, and the Obsidian importer.
 
 To check that the QML loads cleanly without opening a window:
 
@@ -267,6 +307,7 @@ concert_log/backend.py      QML-facing properties and slots
 concert_log/theme.py        Omarchy colors.toml loading and palette derivation
 concert_log/setlist.py      setlist photo import, 1024 px resize, file cleanup
 concert_log/transfer.py     zip export and merge-on-import with sync IDs
+concert_log/markdown_export.py  one .md note per concert, with frontmatter
 qml/Main.qml                window, show list, detail pane, shortcuts
 qml/components/             buttons, text fields, chips, date picker
 qml/dialogs/                add/edit show, artists, sync, confirmation

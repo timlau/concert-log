@@ -8,7 +8,7 @@ from typing import Any
 from PySide6.QtCore import QUrl, Property, QObject, Signal, Slot
 from PySide6.QtGui import QDesktopServices
 
-from . import google_calendar, setlist, transfer
+from . import google_calendar, markdown_export, setlist, transfer
 from .database import ConcertDB
 
 
@@ -132,6 +132,18 @@ class Backend(QObject):
             return {"ok": False, "error": str(error)}
         except OSError as error:
             return {"ok": False, "error": f"Could not write the export: {error}"}
+        return {"ok": True, **result}
+
+    @Slot(result="QVariantMap")
+    def exportMarkdown(self) -> dict[str, Any]:
+        try:
+            result = markdown_export.export_notes(self._db)
+        except ValueError as error:
+            return {"ok": False, "error": str(error)}
+        except OSError as error:
+            return {"ok": False, "error": f"Could not write the notes: {error}"}
+        except sqlite3.Error as error:
+            return {"ok": False, "error": f"Database error: {error}"}
         return {"ok": True, **result}
 
     @Slot(str, result="QVariantMap")

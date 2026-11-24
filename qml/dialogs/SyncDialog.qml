@@ -39,6 +39,15 @@ Dialog {
         setStatus("Saved " + result.shows + " shows to " + name, false)
     }
 
+    function runMarkdownExport() {
+        const result = backend.exportMarkdown()
+        if (!result.ok) {
+            setStatus(result.error, true)
+            return
+        }
+        setStatus("Saved " + result.shows + " notes to " + result.directory, false)
+    }
+
     function runImport(fileUrl) {
         const result = backend.importData(String(fileUrl))
         if (!result.ok) {
@@ -91,7 +100,8 @@ Dialog {
             text: "An export is one .zip containing every show, artist, and setlist photo. "
                   + "Import merges that file into this computer's log: new shows are added "
                   + "and newer edits replace older ones. Shows deleted here stay deleted "
-                  + "here — imports never remove local data."
+                  + "here — imports never remove local data. You can also export one "
+                  + "Markdown note per show to your notes folder."
             color: theme.foregroundMuted
             font.family: theme.fontFamily
             font.pixelSize: 11
@@ -139,6 +149,50 @@ Dialog {
                 text: "Export…"
                 ghost: true
                 onClicked: exportFileDialog.open()
+            }
+        }
+
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 80
+            color: theme.inputBackground
+            radius: 9
+            border.width: 1
+            border.color: theme.border
+
+            Column {
+                anchors.left: parent.left
+                anchors.leftMargin: 14
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width - 130
+                spacing: 4
+
+                Text {
+                    text: "Export concert notes"
+                    color: theme.foreground
+                    font.family: theme.fontFamily
+                    font.pixelSize: 13
+                    font.weight: Font.Medium
+                }
+
+                Text {
+                    width: parent.width
+                    text: "Write one .md file per show to the folder set in config.toml. Existing files are replaced."
+                    color: theme.foregroundDim
+                    font.family: theme.fontFamily
+                    font.pixelSize: 10
+                    wrapMode: Text.Wrap
+                }
+            }
+
+            AppButton {
+                objectName: "exportMarkdownButton"
+                anchors.right: parent.right
+                anchors.rightMargin: 12
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Export notes"
+                ghost: true
+                onClicked: dialog.runMarkdownExport()
             }
         }
 
