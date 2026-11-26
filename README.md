@@ -26,7 +26,8 @@ the rest of the desktop.
   multi-day run gets a green `TODAY` / `ONGOING` badge with `Happening now`,
   `Ends today`, or `Ends 17 Jun`.
 - Concert list grouped by year and month, with a separator for each.
-- Search across bands, events, venues, cities, notes, and support acts as you type.
+- Search across bands, events, venues, cities, notes, and support acts as you
+  type; the field is focused when the app starts, and `Ctrl+F` refocuses it.
 - Artist manager for adding, renaming, and removing bands, with show counts.
 - Autocomplete for band names, venues, and cities already in the log.
 - Inline calendar for picking a date, plus a keyboard-friendly `YYYY-MM-DD` field.
@@ -278,6 +279,9 @@ the add form with the calendar visible).
 | `Ctrl+N` | Add a show                 |
 | `Ctrl+F` | Focus the search field     |
 | `Ctrl+E` | Edit the selected show     |
+| `Tab`    | Move from search to the concert list |
+| `↑` / `↓` | Browse the concert list (after `Tab`) |
+| `Enter`  | Open the highlighted concert |
 | `Esc`    | Close an open dialog       |
 | `Enter`  | Pick from an autocomplete suggestion / open the date picker from the date field |
 

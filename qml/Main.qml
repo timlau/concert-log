@@ -199,9 +199,13 @@ ApplicationWindow {
 
                 AppTextField {
                     id: searchField
+                    objectName: "searchField"
                     Layout.preferredWidth: 250
                     Layout.maximumWidth: 320
                     placeholderText: "Search bands, events, venues…"
+                    focus: true
+                    KeyNavigation.tab: showList
+                    Component.onCompleted: Qt.callLater(function() { forceActiveFocus() })
                     onTextChanged: backend.setSearch(text)
                 }
 
@@ -250,7 +254,7 @@ ApplicationWindow {
                 radius: 12
                 color: theme.surface
                 border.width: 1
-                border.color: theme.border
+                border.color: showList.activeFocus ? theme.accent : theme.border
                 clip: true
 
                 ColumnLayout {
@@ -318,6 +322,7 @@ ApplicationWindow {
 
                         ListView {
                             id: showList
+                            objectName: "showList"
 
                             anchors.fill: parent
                             clip: true
@@ -326,6 +331,55 @@ ApplicationWindow {
                             topMargin: 4
                             bottomMargin: 10
                             boundsBehavior: Flickable.StopAtBounds
+                            activeFocusOnTab: true
+                            KeyNavigation.backtab: searchField
+
+                            highlight: Rectangle {
+                                x: 10
+                                width: showList.width - 20
+                                radius: 9
+                                color: "transparent"
+                                border.width: showList.activeFocus ? 1 : 0
+                                border.color: theme.accent
+                            }
+
+                            onActiveFocusChanged: {
+                                if (!activeFocus || backend.concerts.length === 0)
+                                    return
+                                if (currentIndex < 0 || currentIndex >= backend.concerts.length) {
+                                    let index = 0
+                                    if (selectedId >= 0) {
+                                        for (let i = 0; i < backend.concerts.length; ++i) {
+                                            if (backend.concerts[i].id === selectedId) {
+                                                index = i
+                                                break
+                                            }
+                                        }
+                                    }
+                                    currentIndex = Math.min(index, backend.concerts.length - 1)
+                                }
+                                positionViewAtIndex(currentIndex, ListView.Contain)
+                            }
+
+                            Keys.onPressed: function(event) {
+                                if (event.key === Qt.Key_Up) {
+                                    if (currentIndex > 0) {
+                                        currentIndex--
+                                        positionViewAtIndex(currentIndex, ListView.Contain)
+                                    }
+                                    event.accepted = true
+                                } else if (event.key === Qt.Key_Down) {
+                                    if (currentIndex < backend.concerts.length - 1) {
+                                        currentIndex++
+                                        positionViewAtIndex(currentIndex, ListView.Contain)
+                                    }
+                                    event.accepted = true
+                                } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                                    if (currentIndex >= 0 && currentIndex < backend.concerts.length)
+                                        window.selectConcert(backend.concerts[currentIndex])
+                                    event.accepted = true
+                                }
+                            }
 
                             section.property: "yearMonth"
                             section.criteria: ViewSection.FullString
@@ -513,7 +567,10 @@ ApplicationWindow {
                                     anchors.fill: parent
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: window.selectConcert(showCard.modelData)
+                                    onClicked: {
+                                        showList.currentIndex = index
+                                        window.selectConcert(showCard.modelData)
+                                    }
                                 }
                             }
 
